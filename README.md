@@ -2,6 +2,9 @@
 
 - 一款基于Electron开发的桌面文件上传工具，提供简洁直观的界面，支持多环境配置和批量文件上传功能。
 
+<img width="1147" height="712" alt="image" src="https://github.com/user-attachments/assets/75226246-00e1-42d2-afba-061e3472ac7f" />
+
+
 ## 功能特性
 
 ### 基础功能
