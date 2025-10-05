@@ -1,0 +1,49 @@
+{
+  "name": "uploader",
+  "version": "1.0.0",
+  "description": "桌面文件上传客户端",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "package:mac": "electron-packager . '文件上传客户端' --platform=darwin --arch=arm64 --icon=build/ghost.png --out=dist --overwrite --electron-mirror=https://cdn.npmjs.com/dist/electron/",
+    "package:win": "electron-packager . '文件上传客户端' --platform=win32 --arch=x64 --icon=build/ghostico.ico --out=dist --overwrite",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win"
+  },
+  "keywords": [
+    "electron",
+    "upload",
+    "ssh",
+    "file-transfer"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "archiver": "^7.0.1",
+    "node-ssh": "^13.2.1"
+  },
+  "devDependencies": {
+    "electron": "^38.2.1",
+    "electron-builder": "^26.0.12",
+    "electron-packager": "^17.1.2"
+  },
+  "build": {
+    "appId": "com.uploader.app",
+    "productName": "文件上传客户端",
+    "icon": "build/ghost.png",
+    "mac": {
+      "icon": "build/ghost.png",
+      "target": "dmg"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "build/ghostico.ico"
+    },
+    "directories": {
+      "output": "dist"
+    }
+  }
+}

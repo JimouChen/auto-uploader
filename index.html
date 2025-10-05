@@ -1,0 +1,1457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件上传客户端自动化工具</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+    <script>
+        // 配置Tailwind自定义颜色和圆角
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#4F46E5', // 主色调：靛蓝色
+                        secondary: '#7C3AED', // 辅助色：紫色
+                        accent: '#10B981', // 强调色：绿色
+                        danger: '#EF4444', // 危险色：红色
+                        neutral: '#64748B', // 中性色：灰色
+                    },
+                    borderRadius: {
+                        'xl': '1rem',
+                        '2xl': '1.5rem',
+                    },
+                    fontFamily: {
+                        inter: ['Inter', 'system-ui', 'sans-serif'],
+                    },
+                    boxShadow: {
+                        'elegant': '0 4px 20px rgba(0, 0, 0, 0.08)',
+                        'hover': '0 8px 30px rgba(0, 0, 0, 0.12)',
+                    }
+                },
+            }
+        }
+    </script>
+    <style type="text/tailwindcss">
+        @layer utilities {
+            .content-auto {
+                content-visibility: auto;
+            }
+            .bg-gradient-primary {
+                background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            }
+            .text-shadow {
+                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            }
+            .transition-smooth {
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            }
+            .scrollbar-hide::-webkit-scrollbar {
+                display: none;
+            }
+            .scrollbar-hide {
+                -ms-overflow-style: none;
+                scrollbar-width: none;
+            }
+        }
+    </style>
+</head>
+<body class="font-inter bg-gray-50 min-h-screen flex flex-col">
+    <!-- 顶部标题栏 -->
+    <header class="bg-gradient-primary text-white py-6 px-8 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <h1 class="text-[clamp(1.5rem,3vw,2rem)] font-bold text-shadow">
+                <i class="fa fa-cloud-upload mr-3"></i>文件上传客户端自动化工具🔧
+            </h1>
+            <div class="hidden md:flex space-x-4">
+                <button id="theme-toggle" class="p-2 rounded-full hover:bg-white/20 transition-smooth">
+                    <i class="fa fa-moon-o"></i>
+                </button>
+                <button id="settings-btn" class="p-2 rounded-full hover:bg-white/20 transition-smooth">
+                    <i class="fa fa-cog"></i>
+                </button>
+                <button id="about-btn" class="p-2 rounded-full hover:bg-white/20 transition-smooth">
+                    <i class="fa fa-info-circle"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区域 -->
+    <main class="flex-grow container mx-auto py-8 px-4 md:px-8">
+        <div class="max-w-4xl mx-auto bg-white rounded-2xl shadow-elegant p-6 md:p-8">
+            <!-- 表单区域 -->
+            <form id="upload-form" class="space-y-6">
+                <!-- 选择模式切换 -->
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <label class="block text-neutral font-medium">选择模式</label>
+                        <div class="relative inline-block w-10 mr-2 align-middle select-none">
+                            <input type="checkbox" id="mode-toggle" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 border-gray-300 appearance-none cursor-pointer transition-transform duration-200 ease-in transform translate-x-0 checked:translate-x-4 checked:border-primary" />
+                            <label for="mode-toggle" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-300 cursor-pointer checked:bg-primary transition-colors duration-200 ease-in"></label>
+                        </div>
+                        <span id="mode-label" class="text-sm text-neutral">文件选择</span>
+                    </div>
+                </div>
+
+                <!-- 文件选择模式 -->
+                <div id="file-select-mode" class="space-y-3">
+                    <label for="local-path" class="block text-neutral font-medium">本地文件/文件夹</label>
+                    <div class="flex space-x-3">
+                        <input
+                            type="text"
+                            id="local-path"
+                            class="flex-grow px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth"
+                            placeholder="请选择本地文件或文件夹"
+                            readonly
+                        />
+                        <div class="flex space-x-2">
+                            <button
+                                type="button"
+                                id="select-file-btn"
+                                class="px-4 py-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-smooth"
+                            >
+                                <i class="fa fa-file-text-o mr-2"></i>选择文件
+                            </button>
+                            <button
+                                type="button"
+                                id="select-folder-btn"
+                                class="px-4 py-3 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-smooth"
+                            >
+                                <i class="fa fa-folder-o mr-2"></i>选择文件夹
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 路径输入模式 -->
+                <div id="path-input-mode" class="space-y-3 hidden">
+                    <div class="flex items-center justify-between">
+                        <label for="folder-paths" class="block text-neutral font-medium">文件夹路径 (每行一个)</label>
+                        <button
+                            type="button"
+                            id="add-folder-btn"
+                            class="px-3 py-1 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 transition-smooth text-sm"
+                        >
+                            <i class="fa fa-plus-circle mr-1"></i>添加路径
+                        </button>
+                    </div>
+                    <textarea
+                        id="folder-paths"
+                        rows="4"
+                        class="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth resize-y"
+                        placeholder="请输入文件夹路径，每行一个
+例如:
+/Users/username/folder1
+/Users/username/folder2"
+                    ></textarea>
+                    <div class="text-xs text-gray-500">
+                        <i class="fa fa-info-circle mr-1"></i>
+                        <span>输入的文件夹将被压缩为同名zip文件后上传</span>
+                    </div>
+                </div>
+
+                <!-- 服务器连接信息 -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- 服务器IP -->
+                    <div class="space-y-3">
+                        <label for="server-ip-select" class="block text-neutral font-medium">服务器IP</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                <i class="fa fa-server"></i>
+                            </span>
+                            <select
+                                id="server-ip-select"
+                                class="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth appearance-none cursor-pointer"
+                            >
+                                <option value="">请选择环境或手动输入</option>
+                                <option value="custom">手动输入IP...</option>
+                            </select>
+                            <span class="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none text-gray-400">
+                                <i class="fa fa-chevron-down"></i>
+                            </span>
+                        </div>
+                        <div id="custom-ip-container" class="hidden">
+                            <input
+                                type="text"
+                                id="custom-server-ip"
+                                class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth"
+                                placeholder="请输入服务器IP地址"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- 用户名 -->
+                    <div class="space-y-3">
+                        <label for="username" class="block text-neutral font-medium">用户名</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                <i class="fa fa-user-o"></i>
+                            </span>
+                            <input
+                                type="text"
+                                id="username"
+                                class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth"
+                                placeholder="请输入用户名"
+                            />
+                        </div>
+                    </div>
+
+                    <!-- 密码 -->
+                    <div class="space-y-3">
+                        <label for="password" class="block text-neutral font-medium">密码</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                <i class="fa fa-lock"></i>
+                            </span>
+                            <input
+                                type="password"
+                                id="password"
+                                class="w-full pl-10 pr-10 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth"
+                                placeholder="请输入密码"
+                            />
+                            <button
+                                type="button"
+                                id="toggle-password"
+                                class="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600"
+                            >
+                                <i class="fa fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 远程目录 -->
+                    <div class="space-y-3">
+                        <label for="remote-path" class="block text-neutral font-medium">远程目录</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                <i class="fa fa-folder-o"></i>
+                            </span>
+                            <input
+                                type="text"
+                                id="remote-path"
+                                class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth"
+                                placeholder="请输入远程目录路径 (如: /home/user/upload)"
+                            />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 上传按钮 -->
+                <div class="pt-4">
+                    <button
+                        type="submit"
+                        id="upload-btn"
+                        class="w-full bg-gradient-primary hover:opacity-90 text-white font-medium py-4 px-6 rounded-xl shadow-lg hover:shadow-xl transition-smooth flex items-center justify-center"
+                    >
+                        <i class="fa fa-cloud-upload mr-3"></i>
+                        <span>开始上传</span>
+                    </button>
+                </div>
+            </form>
+
+            <!-- 进度条区域 -->
+            <div id="progress-container" class="mt-8 hidden">
+                <div class="flex justify-between items-center mb-2">
+                    <span class="text-neutral font-medium">上传进度</span>
+                    <span id="progress-percentage" class="text-primary font-medium">0%</span>
+                </div>
+                <div class="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
+                    <div
+                        id="progress-bar"
+                        class="h-full bg-gradient-primary rounded-full transition-all duration-300 ease-out"
+                        style="width: 0%"
+                    ></div>
+                </div>
+                <div class="mt-2 text-xs text-gray-500 flex justify-between">
+                    <span id="progress-size">0 MB / 0 MB</span>
+                    <span id="progress-status">准备上传...</span>
+                </div>
+            </div>
+
+            <!-- 结果提示区域 -->
+            <div id="result-container" class="mt-8 hidden">
+                <div id="result-success" class="bg-green-50 border border-green-100 text-green-800 p-4 rounded-xl hidden">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 pt-0.5">
+                            <i class="fa fa-check-circle text-2xl text-green-500"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium">上传成功</h3>
+                            <div class="mt-2 text-sm">
+                                <p id="success-message">文件已成功上传到服务器。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="result-error" class="bg-red-50 border border-red-100 text-red-800 p-4 rounded-xl hidden">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0 pt-0.5">
+                            <i class="fa fa-exclamation-circle text-2xl text-red-500"></i>
+                        </div>
+                        <div class="ml-3">
+                            <h3 class="text-sm font-medium">上传失败</h3>
+                            <div class="mt-2 text-sm">
+                                <p id="error-message">上传过程中发生错误，请重试。</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="bg-gray-800 text-gray-300 py-4 px-8">
+        <div class="container mx-auto text-center text-sm">
+            <p>&copy; 2025 文件上传客户端自动化工具 | 版本 1.0.0</p>
+        </div>
+    </footer>
+
+    <!-- 环境配置模态框 -->
+    <div id="settings-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
+        <div class="absolute inset-0 modal-backdrop" id="modal-backdrop"></div>
+        <div class="relative w-full max-w-lg bg-white rounded-2xl shadow-xl p-6 md:p-8 modal-content overflow-y-auto max-h-[90vh]">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold text-gray-800">环境配置</h3>
+                <button id="close-settings-modal" class="text-gray-400 hover:text-gray-600 transition-colors">
+                    <i class="fa fa-times text-xl"></i>
+                </button>
+            </div>
+            
+            <form id="settings-form" class="space-y-6">
+                <!-- 配置模式选择 -->
+                <div class="p-4 bg-blue-50 dark:bg-blue-900/30 rounded-xl">
+                    <div class="flex items-center space-x-4 mb-3">
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="auth-mode" id="individual-auth" value="individual" class="sr-only peer" checked>
+                            <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">单独配置每个环境</span>
+                        </label>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="radio" name="auth-mode" id="unified-auth" value="unified" class="sr-only peer">
+                            <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-primary"></div>
+                            <span class="ml-2 text-sm font-medium text-gray-700 dark:text-gray-300">统一配置所有环境</span>
+                        </label>
+                    </div>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">选择"单独配置"为每个环境设置不同的IP和账号密码；选择"统一配置"使用相同的账号密码访问所有环境。</p>
+                </div>
+                
+                <!-- 统一配置区域 -->
+                <div id="unified-config-section" class="hidden space-y-4 p-4 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                    <div class="space-y-3">
+                        <label for="unified-username" class="block text-neutral font-medium">统一用户名</label>
+                        <div class="relative form-input">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                <i class="fa fa-user"></i>
+                            </span>
+                            <input
+                                type="text"
+                                id="unified-username"
+                                class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth"
+                                placeholder="请输入所有环境共用的用户名"
+                            />
+                        </div>
+                    </div>
+                    <div class="space-y-3">
+                        <label for="unified-password" class="block text-neutral font-medium">统一密码</label>
+                        <div class="relative form-input">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                <i class="fa fa-lock"></i>
+                            </span>
+                            <input
+                                type="password"
+                                id="unified-password"
+                                class="w-full pl-10 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth"
+                                placeholder="请输入所有环境共用的密码"
+                            />
+                            <button type="button" id="toggle-unified-password" class="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600 transition-colors">
+                                <i class="fa fa-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 单独配置区域 -->
+                <div id="individual-config-section" class="space-y-6">
+                    <!-- 开发环境配置 -->
+                    <div class="space-y-4 p-4 bg-green-50 dark:bg-green-900/20 rounded-xl">
+                        <h4 class="text-lg font-semibold text-gray-800 dark:text-gray-200">开发环境</h4>
+                        <div class="space-y-3">
+                            <label for="dev-ip" class="block text-neutral font-medium">IP地址</label>
+                            <div class="relative form-input">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                    <i class="fa fa-server"></i>
+                                </span>
+                                <input
+                                    type="text"
+                                    id="dev-ip"
+                                    class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth"
+                                    placeholder="请输入开发环境IP地址"
+                                />
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <label for="dev-username" class="block text-neutral font-medium">用户名</label>
+                            <div class="relative form-input">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                    <i class="fa fa-user"></i>
+                                </span>
+                                <input
+                                    type="text"
+                                    id="dev-username"
+                                    class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth"
+                                    placeholder="请输入开发环境用户名"
+                                />
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <label for="dev-password" class="block text-neutral font-medium">密码</label>
+                            <div class="relative form-input">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                    <i class="fa fa-lock"></i>
+                                </span>
+                                <input
+                                    type="password"
+                                    id="dev-password"
+                                    class="w-full pl-10 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth"
+                                    placeholder="请输入开发环境密码"
+                                />
+                                <button type="button" id="toggle-dev-password" class="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600 transition-colors">
+                                    <i class="fa fa-eye-slash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 测试环境配置 -->
+                    <div class="space-y-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-xl">
+                        <h4 class="text-lg font-semibold text-gray-800 dark:text-gray-200">测试环境</h4>
+                        <div class="space-y-3">
+                            <label for="test-ip" class="block text-neutral font-medium">IP地址</label>
+                            <div class="relative form-input">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                    <i class="fa fa-server"></i>
+                                </span>
+                                <input
+                                    type="text"
+                                    id="test-ip"
+                                    class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth"
+                                    placeholder="请输入测试环境IP地址"
+                                />
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <label for="test-username" class="block text-neutral font-medium">用户名</label>
+                            <div class="relative form-input">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                    <i class="fa fa-user"></i>
+                                </span>
+                                <input
+                                    type="text"
+                                    id="test-username"
+                                    class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth"
+                                    placeholder="请输入测试环境用户名"
+                                />
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <label for="test-password" class="block text-neutral font-medium">密码</label>
+                            <div class="relative form-input">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                    <i class="fa fa-lock"></i>
+                                </span>
+                                <input
+                                    type="password"
+                                    id="test-password"
+                                    class="w-full pl-10 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth"
+                                    placeholder="请输入测试环境密码"
+                                />
+                                <button type="button" id="toggle-test-password" class="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600 transition-colors">
+                                    <i class="fa fa-eye-slash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 生产环境配置 -->
+                    <div class="space-y-4 p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl">
+                        <h4 class="text-lg font-semibold text-gray-800 dark:text-gray-200">生产环境</h4>
+                        <div class="space-y-3">
+                            <label for="release-ip" class="block text-neutral font-medium">IP地址</label>
+                            <div class="relative form-input">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                    <i class="fa fa-server"></i>
+                                </span>
+                                <input
+                                    type="text"
+                                    id="release-ip"
+                                    class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth"
+                                    placeholder="请输入生产环境IP地址"
+                                />
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <label for="release-username" class="block text-neutral font-medium">用户名</label>
+                            <div class="relative form-input">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                    <i class="fa fa-user"></i>
+                                </span>
+                                <input
+                                    type="text"
+                                    id="release-username"
+                                    class="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth"
+                                    placeholder="请输入生产环境用户名"
+                                />
+                            </div>
+                        </div>
+                        <div class="space-y-3">
+                            <label for="release-password" class="block text-neutral font-medium">密码</label>
+                            <div class="relative form-input">
+                                <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400">
+                                    <i class="fa fa-lock"></i>
+                                </span>
+                                <input
+                                    type="password"
+                                    id="release-password"
+                                    class="w-full pl-10 pr-12 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-primary/50 focus:border-primary outline-none transition-smooth"
+                                    placeholder="请输入生产环境密码"
+                                />
+                                <button type="button" id="toggle-release-password" class="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600 transition-colors">
+                                    <i class="fa fa-eye-slash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 按钮区域 -->
+                <div class="pt-4 flex space-x-4">
+                    <button
+                        type="button"
+                        id="cancel-settings"
+                        class="flex-1 py-3 px-6 bg-gray-100 hover:bg-gray-200 text-gray-800 font-medium rounded-xl transition-smooth"
+                    >
+                        取消
+                    </button>
+                    <button
+                        type="submit"
+                        id="save-settings"
+                        class="flex-1 py-3 px-6 bg-gradient-primary hover:opacity-90 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition-smooth"
+                    >
+                        保存配置
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 自定义样式 -->
+    <style>
+        /* 切换开关样式 */
+        .toggle-checkbox:checked {
+            right: 0;
+            border-color: #4F46E5;
+        }
+        .toggle-checkbox:checked + .toggle-label {
+            background-color: #4F46E5;
+        }
+        
+        /* 模态框样式 */
+        .modal-backdrop {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
+        }
+        .modal-content {
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .modal-content.show {
+            transform: scale(1);
+        }
+        
+        /* 表单输入焦点动画 */
+        .form-input:focus-within {
+            box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.2);
+        }
+        
+        /* 深色主题样式 */
+        body.dark-theme {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        body.dark-theme .bg-gray-50 {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+            border-color: #333;
+        }
+        body.dark-theme .bg-white {
+            background-color: #2d2d2d;
+            color: #e0e0e0;
+            border-color: #444;
+        }
+        body.dark-theme .bg-gray-100 {
+            background-color: #252525;
+        }
+        body.dark-theme .text-neutral {
+            color: #e0e0e0;
+        }
+        body.dark-theme .text-gray-500 {
+            color: #b0b0b0;
+        }
+        body.dark-theme .text-gray-400 {
+            color: #a0a0a0;
+        }
+        body.dark-theme .text-gray-600 {
+            color: #c0c0c0;
+        }
+        body.dark-theme .bg-gray-800 {
+            background-color: #0a0a0a;
+        }
+        body.dark-theme .bg-green-50 {
+            background-color: #1b361b;
+            border-color: #2c592c;
+            color: #a8e6a8;
+        }
+        body.dark-theme .bg-red-50 {
+            background-color: #4a1b1b;
+            border-color: #732929;
+            color: #ff9e9e;
+        }
+        
+        /* 关于按钮提示样式 */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+        }
+        .tooltip .tooltip-text {
+            visibility: hidden;
+            width: 180px;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px 12px;
+            position: absolute;
+            z-index: 1000;
+            top: 125%;
+            left: 50%;
+            margin-left: -90px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+        .tooltip:hover .tooltip-text,
+        .tooltip:focus .tooltip-text {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+
+    <!-- JavaScript -->
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+              // DOM元素选择
+              const uploadForm = document.getElementById('upload-form');
+              const localPathInput = document.getElementById('local-path');
+              const selectFileBtn = document.getElementById('select-file-btn');
+              const selectFolderBtn = document.getElementById('select-folder-btn');
+              const serverIpSelect = document.getElementById('server-ip-select');
+              const customIpContainer = document.getElementById('custom-ip-container');
+              const customServerIp = document.getElementById('custom-server-ip');
+              const usernameInput = document.getElementById('username');
+              const passwordInput = document.getElementById('password');
+              const remotePathInput = document.getElementById('remote-path');
+              const togglePasswordBtn = document.getElementById('toggle-password');
+              const uploadBtn = document.getElementById('upload-btn');
+              const progressContainer = document.getElementById('progress-container');
+              const progressBar = document.getElementById('progress-bar');
+              const progressPercentage = document.getElementById('progress-percentage');
+              const progressSize = document.getElementById('progress-size');
+              const progressStatus = document.getElementById('progress-status');
+              const resultContainer = document.getElementById('result-container');
+              const resultSuccess = document.getElementById('result-success');
+              const resultError = document.getElementById('result-error');
+              const successMessage = document.getElementById('success-message');
+              const errorMessage = document.getElementById('error-message');
+              const themeToggleBtn = document.getElementById('theme-toggle');
+              const settingsBtn = document.getElementById('settings-btn');
+              const aboutBtn = document.getElementById('about-btn');
+              
+              // 设置模态框元素
+              const settingsModal = document.getElementById('settings-modal');
+              const modalBackdrop = document.getElementById('modal-backdrop');
+              const closeModalBtn = document.getElementById('close-settings-modal');
+              const cancelSettings = document.getElementById('cancel-settings');
+              const settingsForm = document.getElementById('settings-form');
+              const devIpInput = document.getElementById('dev-ip');
+              const testIpInput = document.getElementById('test-ip');
+              const releaseIpInput = document.getElementById('release-ip');
+              const saveSettingsBtn = document.getElementById('save-settings');
+              
+              // 初始化环境配置
+            let environmentConfig = {};
+            await loadEnvironmentConfig();
+            updateServerIpSelectOptions();
+            
+            // 初始化配置模式切换和密码可见性切换
+            setupAuthModeToggle();
+            setupPasswordToggles();
+            
+            // 初始化账号密码联动
+            setupServerIpChangeHandler();
+            
+            // 加载最近使用的上传配置
+            await loadLastUploadConfig();
+              
+              // 新模式元素
+              const modeToggle = document.getElementById('mode-toggle');
+              const modeLabel = document.getElementById('mode-label');
+              const fileSelectMode = document.getElementById('file-select-mode');
+              const pathInputMode = document.getElementById('path-input-mode');
+              const folderPathsTextarea = document.getElementById('folder-paths');
+              const addFolderBtn = document.getElementById('add-folder-btn');
+
+              // 选择文件
+            selectFileBtn.addEventListener('click', async () => {
+                const filePath = await window.electronAPI.selectFile();
+                if (filePath) {
+                    localPathInput.value = filePath;
+                }
+            });
+
+            // 选择文件夹
+            selectFolderBtn.addEventListener('click', async () => {
+                const folderPath = await window.electronAPI.selectFolder();
+                if (folderPath) {
+                    localPathInput.value = folderPath;
+                }
+            });
+
+            // 模式切换处理
+            modeToggle.addEventListener('change', () => {
+                const isPathInputMode = modeToggle.checked;
+                fileSelectMode.classList.toggle('hidden', isPathInputMode);
+                pathInputMode.classList.toggle('hidden', !isPathInputMode);
+                modeLabel.textContent = isPathInputMode ? '路径输入' : '文件选择';
+            });
+
+            // 添加路径按钮事件
+            addFolderBtn.addEventListener('click', async () => {
+                const folderPath = await window.electronAPI.selectFolder();
+                if (folderPath) {
+                    const currentValue = folderPathsTextarea.value;
+                    if (currentValue) {
+                        folderPathsTextarea.value = currentValue + '\n' + folderPath;
+                    } else {
+                        folderPathsTextarea.value = folderPath;
+                    }
+                    // 自动滚动到底部
+                    folderPathsTextarea.scrollTop = folderPathsTextarea.scrollHeight;
+                }
+            });
+            
+            // 配置模式切换处理
+            function setupAuthModeToggle() {
+                const individualAuth = document.getElementById('individual-auth');
+                const unifiedAuth = document.getElementById('unified-auth');
+                const individualConfigSection = document.getElementById('individual-config-section');
+                const unifiedConfigSection = document.getElementById('unified-config-section');
+                
+                if (individualAuth && unifiedAuth && individualConfigSection && unifiedConfigSection) {
+                    individualAuth.addEventListener('change', () => {
+                        if (individualAuth.checked) {
+                            individualConfigSection.classList.remove('hidden');
+                            unifiedConfigSection.classList.add('hidden');
+                        }
+                    });
+                    
+                    unifiedAuth.addEventListener('change', () => {
+                        if (unifiedAuth.checked) {
+                            individualConfigSection.classList.add('hidden');
+                            unifiedConfigSection.classList.remove('hidden');
+                        }
+                    });
+                }
+            }
+
+            // 设置密码可见性切换
+            function setupPasswordToggles() {
+                const toggleButtons = [
+                    { toggleId: 'toggle-dev-password', passwordId: 'dev-password' },
+                    { toggleId: 'toggle-test-password', passwordId: 'test-password' },
+                    { toggleId: 'toggle-release-password', passwordId: 'release-password' },
+                    { toggleId: 'toggle-unified-password', passwordId: 'unified-password' }
+                ];
+                
+                toggleButtons.forEach(({ toggleId, passwordId }) => {
+                    const toggleBtn = document.getElementById(toggleId);
+                    const passwordInput = document.getElementById(passwordId);
+                    
+                    if (toggleBtn && passwordInput) {
+                        toggleBtn.addEventListener('click', () => {
+                            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                            passwordInput.setAttribute('type', type);
+                            toggleBtn.innerHTML = type === 'password' ? '<i class="fa fa-eye-slash"></i>' : '<i class="fa fa-eye"></i>';
+                        });
+                    }
+                });
+            }
+
+            // 加载环境配置
+            async function loadEnvironmentConfig() {
+                try {
+                    const config = await window.electronAPI.getEnvironmentConfig();
+                    environmentConfig = config || {};
+                    
+                    // 确保配置结构完整
+                    environmentConfig.dev = environmentConfig.dev || { name: '开发环境', ip: '' };
+                    environmentConfig.test = environmentConfig.test || { name: '测试环境', ip: '' };
+                    environmentConfig.release = environmentConfig.release || { name: '生产环境', ip: '' };
+                    environmentConfig.authMode = environmentConfig.authMode || 'individual';
+                    environmentConfig.lastUploadConfig = environmentConfig.lastUploadConfig || {};
+                    
+                    // 更新设置表单中的值
+                    if (config.dev && config.dev.ip) {
+                        devIpInput.value = config.dev.ip;
+                    }
+                    if (config.test && config.test.ip) {
+                        testIpInput.value = config.test.ip;
+                    }
+                    if (config.release && config.release.ip) {
+                        releaseIpInput.value = config.release.ip;
+                    }
+                    
+                    // 加载账号密码（单独配置模式）
+                    const devUsernameInput = document.getElementById('dev-username');
+                    const devPasswordInput = document.getElementById('dev-password');
+                    const testUsernameInput = document.getElementById('test-username');
+                    const testPasswordInput = document.getElementById('test-password');
+                    const releaseUsernameInput = document.getElementById('release-username');
+                    const releasePasswordInput = document.getElementById('release-password');
+                    
+                    if (devUsernameInput) devUsernameInput.value = config.dev?.username || '';
+                    if (devPasswordInput) devPasswordInput.value = config.dev?.password || '';
+                    if (testUsernameInput) testUsernameInput.value = config.test?.username || '';
+                    if (testPasswordInput) testPasswordInput.value = config.test?.password || '';
+                    if (releaseUsernameInput) releaseUsernameInput.value = config.release?.username || '';
+                    if (releasePasswordInput) releasePasswordInput.value = config.release?.password || '';
+                    
+                    // 加载统一配置
+                    const unifiedUsernameInput = document.getElementById('unified-username');
+                    const unifiedPasswordInput = document.getElementById('unified-password');
+                    const individualAuth = document.getElementById('individual-auth');
+                    const unifiedAuth = document.getElementById('unified-auth');
+                    const individualConfigSection = document.getElementById('individual-config-section');
+                    const unifiedConfigSection = document.getElementById('unified-config-section');
+                    
+                    if (unifiedUsernameInput) unifiedUsernameInput.value = config.unifiedUsername || '';
+                    if (unifiedPasswordInput) unifiedPasswordInput.value = config.unifiedPassword || '';
+                    
+                    // 设置配置模式
+                    if (config.authMode === 'unified') {
+                        if (unifiedAuth) unifiedAuth.checked = true;
+                        if (individualConfigSection) individualConfigSection.classList.add('hidden');
+                        if (unifiedConfigSection) unifiedConfigSection.classList.remove('hidden');
+                    } else {
+                        if (individualAuth) individualAuth.checked = true;
+                    }
+                } catch (error) {
+                    console.error('加载环境配置失败:', error);
+                    // 使用默认配置
+                    environmentConfig = {
+                        authMode: 'individual',
+                        dev: { name: '开发环境', ip: '', username: '', password: '' },
+                        test: { name: '测试环境', ip: '', username: '', password: '' },
+                        release: { name: '生产环境', ip: '', username: '', password: '' },
+                        unifiedUsername: '',
+                        unifiedPassword: ''
+                    };
+                }
+            }
+            
+            // 更新服务器IP选择框选项
+            function updateServerIpSelectOptions() {
+                // 保存当前选中的值
+                const currentValue = serverIpSelect.value;
+                
+                // 移除所有选项，保留默认选项
+                while (serverIpSelect.options.length > 2) {
+                    serverIpSelect.remove(2);
+                }
+                
+                // 添加环境配置选项
+                if (environmentConfig.dev && environmentConfig.dev.ip) {
+                    const option = document.createElement('option');
+                    option.value = 'dev';
+                    option.textContent = `${environmentConfig.dev.name} (${environmentConfig.dev.ip})`;
+                    serverIpSelect.appendChild(option);
+                }
+                
+                if (environmentConfig.test && environmentConfig.test.ip) {
+                    const option = document.createElement('option');
+                    option.value = 'test';
+                    option.textContent = `${environmentConfig.test.name} (${environmentConfig.test.ip})`;
+                    serverIpSelect.appendChild(option);
+                }
+                
+                if (environmentConfig.release && environmentConfig.release.ip) {
+                    const option = document.createElement('option');
+                    option.value = 'release';
+                    option.textContent = `${environmentConfig.release.name} (${environmentConfig.release.ip})`;
+                    serverIpSelect.appendChild(option);
+                }
+                
+                // 尝试恢复之前选中的值
+                try {
+                    serverIpSelect.value = currentValue;
+                } catch (e) {
+                    serverIpSelect.value = '';
+                }
+                
+                // 触发change事件以更新UI
+                serverIpSelect.dispatchEvent(new Event('change'));
+            }
+            
+            // 打开设置模态框
+            function openSettingsModal() {
+                settingsModal.classList.remove('hidden');
+                // 触发动画
+                setTimeout(() => {
+                    const modalContent = settingsModal.querySelector('.modal-content');
+                    modalContent.classList.add('show');
+                }, 10);
+            }
+            
+            // 关闭设置模态框
+            function closeSettingsModal() {
+                const modalContent = settingsModal.querySelector('.modal-content');
+                modalContent.classList.remove('show');
+                
+                // 等待动画完成后隐藏
+                setTimeout(() => {
+                    settingsModal.classList.add('hidden');
+                }, 300);
+            }
+            
+            // 保存环境配置
+            async function saveEnvironmentConfig() {
+                try {
+                    // 获取配置模式
+                    const individualAuth = document.getElementById('individual-auth');
+                    const authMode = individualAuth && individualAuth.checked ? 'individual' : 'unified';
+                    
+                    // 构建配置对象
+                    const configToSave = {
+                        authMode: authMode,
+                        dev: {
+                            name: '开发环境',
+                            ip: devIpInput.value.trim()
+                        },
+                        test: {
+                            name: '测试环境',
+                            ip: testIpInput.value.trim()
+                        },
+                        release: {
+                            name: '生产环境',
+                            ip: releaseIpInput.value.trim()
+                        }
+                    };
+                    
+                    // 添加账号密码配置
+                    const devUsernameInput = document.getElementById('dev-username');
+                    const devPasswordInput = document.getElementById('dev-password');
+                    const testUsernameInput = document.getElementById('test-username');
+                    const testPasswordInput = document.getElementById('test-password');
+                    const releaseUsernameInput = document.getElementById('release-username');
+                    const releasePasswordInput = document.getElementById('release-password');
+                    
+                    if (devUsernameInput) configToSave.dev.username = devUsernameInput.value.trim();
+                    if (devPasswordInput) configToSave.dev.password = devPasswordInput.value;
+                    if (testUsernameInput) configToSave.test.username = testUsernameInput.value.trim();
+                    if (testPasswordInput) configToSave.test.password = testPasswordInput.value;
+                    if (releaseUsernameInput) configToSave.release.username = releaseUsernameInput.value.trim();
+                    if (releasePasswordInput) configToSave.release.password = releasePasswordInput.value;
+                    
+                    // 添加统一配置
+                    const unifiedUsernameInput = document.getElementById('unified-username');
+                    const unifiedPasswordInput = document.getElementById('unified-password');
+                    
+                    if (unifiedUsernameInput) configToSave.unifiedUsername = unifiedUsernameInput.value.trim();
+                    if (unifiedPasswordInput) configToSave.unifiedPassword = unifiedPasswordInput.value;
+                    
+                    const result = await window.electronAPI.saveEnvironmentConfig(configToSave);
+                    
+                    if (result && result.success) {
+                        // 更新本地配置
+                        environmentConfig = configToSave;
+                        // 更新服务器IP选择框
+                        updateServerIpSelectOptions();
+                        // 初始化账号密码联动
+                        setupServerIpChangeHandler();
+                        // 显示成功提示
+                        showNotification('环境配置已保存', 'success');
+                        // 关闭模态框
+                        closeSettingsModal();
+                    } else {
+                        showNotification('保存失败: ' + (result?.message || '未知错误'), 'error');
+                    }
+                } catch (error) {
+                    console.error('保存环境配置失败:', error);
+                    showNotification('保存配置时发生错误', 'error');
+                }
+            }
+
+            // 服务器IP选择变化时，联动更新用户名和密码输入框
+            function setupServerIpChangeHandler() {
+                // 获取服务器IP选择框
+                const serverIpSelect = document.getElementById('server-ip-select');
+                
+                if (!serverIpSelect) return;
+                
+                serverIpSelect.addEventListener('change', async function() {
+                    const selectedValue = this.value;
+                    if (!selectedValue) return;
+                    
+                    // 保存用户选择的环境到localStorage
+                    localStorage.setItem('lastSelectedEnv', selectedValue);
+                    
+                    try {
+                        // 获取当前环境配置
+                        const config = environmentConfig || await window.electronAPI.getEnvironmentConfig() || {};
+                        
+                        // 获取对应的用户名和密码输入框
+                        const usernameInput = document.getElementById('username');
+                        const passwordInput = document.getElementById('password');
+                        
+                        if (!usernameInput || !passwordInput) return;
+                            
+                            let username = '';
+                            let password = '';
+                            
+                            // 如果是统一配置模式
+                            if (config.authMode === 'unified') {
+                                username = config.unifiedUsername || '';
+                                password = config.unifiedPassword || '';
+                            } else {
+                                // 直接根据selectedValue获取对应的账号密码（更可靠的方式）
+                                if (selectedValue === 'dev' && config.dev) {
+                                    username = config.dev.username || '';
+                                    password = config.dev.password || '';
+                                } else if (selectedValue === 'test' && config.test) {
+                                    username = config.test.username || '';
+                                    password = config.test.password || '';
+                                } else if (selectedValue === 'release' && config.release) {
+                                    username = config.release.username || '';
+                                    password = config.release.password || '';
+                                } else if (selectedValue === 'custom') {
+                                    // 自定义IP的情况，不自动填充账号密码
+                                    username = '';
+                                    password = '';
+                                }
+                            }
+                            
+                            // 更新输入框的值
+                            usernameInput.value = username;
+                            passwordInput.value = password;
+                        } catch (error) {
+                            console.error('更新账号密码失败:', error);
+                        }
+                    });
+                    
+                    // 触发一次change事件以初始化
+                    const event = new Event('change');
+                    serverIpSelect.dispatchEvent(event);
+            }
+            
+            // 监听服务器IP选择框变化
+            serverIpSelect.addEventListener('change', () => {
+                const selectedValue = serverIpSelect.value;
+                
+                // 显示或隐藏自定义IP输入框
+                if (selectedValue === 'custom') {
+                    customIpContainer.classList.remove('hidden');
+                    customServerIp.focus();
+                } else {
+                    customIpContainer.classList.add('hidden');
+                }
+            });
+            
+            // 获取当前选择的服务器IP
+            function getSelectedServerIp() {
+                const selectedValue = serverIpSelect.value;
+                
+                if (selectedValue === 'custom') {
+                    return customServerIp.value.trim();
+                } else if (selectedValue && environmentConfig[selectedValue] && environmentConfig[selectedValue].ip) {
+                    return environmentConfig[selectedValue].ip;
+                }
+                
+                return '';
+            }
+
+            // 验证文件夹路径
+            async function validateFolderPaths(paths) {
+                const validPaths = [];
+                const invalidPaths = [];
+                
+                for (const path of paths) {
+                    const trimmedPath = path.trim();
+                    if (trimmedPath) {
+                        const exists = await window.electronAPI.checkPathExists(trimmedPath);
+                        if (exists) {
+                            validPaths.push(trimmedPath);
+                        } else {
+                            invalidPaths.push(trimmedPath);
+                        }
+                    }
+                }
+                
+                return { validPaths, invalidPaths };
+            }
+
+            // 切换密码可见性
+            togglePasswordBtn.addEventListener('click', () => {
+                const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                passwordInput.setAttribute('type', type);
+                togglePasswordBtn.innerHTML = type === 'password' ? '<i class="fa fa-eye-slash"></i>' : '<i class="fa fa-eye"></i>';
+            });
+            
+            // 设置按钮点击事件
+            settingsBtn.addEventListener('click', openSettingsModal);
+            
+            // 关闭设置模态框事件
+            closeModalBtn.addEventListener('click', closeSettingsModal);
+            modalBackdrop.addEventListener('click', closeSettingsModal);
+            cancelSettings.addEventListener('click', closeSettingsModal);
+            
+            // 设置表单提交事件
+            settingsForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                await saveEnvironmentConfig();
+            });
+
+            // 表单提交处理
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            // 表单验证
+            const serverIp = getSelectedServerIp();
+            if (!serverIp) {
+                showNotification('请选择服务器IP或输入自定义IP', 'error');
+                return;
+            }
+            if (!usernameInput.value) {
+                showNotification('请输入用户名', 'error');
+                return;
+            }
+            if (!passwordInput.value) {
+                showNotification('请输入密码', 'error');
+                return;
+            }
+            if (!remotePathInput.value) {
+                showNotification('请输入远程目录', 'error');
+                return;
+            }
+
+            // 根据当前模式进行验证
+            const isPathInputMode = modeToggle.checked;
+            if (isPathInputMode) {
+                // 路径输入模式
+                const folderPaths = folderPathsTextarea.value.trim();
+                if (!folderPaths) {
+                    showNotification('请至少输入一个文件夹路径', 'error');
+                    return;
+                }
+                
+                // 检查每行路径是否有效
+                const paths = folderPaths.split('\n').filter(path => path.trim());
+                
+                // 验证路径
+                const { validPaths, invalidPaths } = await validateFolderPaths(paths);
+                
+                if (invalidPaths.length > 0) {
+                    const invalidList = invalidPaths.join('\n');
+                    showNotification(`以下路径不存在或无法访问:\n${invalidList}`, 'error');
+                    return;
+                }
+                
+                if (validPaths.length === 0) {
+                    showNotification('没有有效的文件夹路径', 'error');
+                    return;
+                }
+            } else {
+                // 文件选择模式
+                if (!localPathInput.value) {
+                    showNotification('请选择本地文件或文件夹', 'error');
+                    return;
+                }
+            }
+
+                // 重置上传相关UI
+                resetUploadUI();
+                progressContainer.classList.remove('hidden');
+                resultContainer.classList.add('hidden');
+                resultSuccess.classList.add('hidden');
+                resultError.classList.add('hidden');
+
+                // 禁用按钮防止重复提交
+                uploadBtn.disabled = true;
+                uploadBtn.innerHTML = '<i class="fa fa-spinner fa-spin mr-3"></i><span>上传中...</span>';
+
+                try {
+                    // 设置上传进度监听
+                    window.electronAPI.onUploadProgress((progress) => {
+                        const percentage = progress.percentage;
+                        const uploadedMB = (progress.uploaded / (1024 * 1024)).toFixed(2);
+                        const totalMB = (progress.total / (1024 * 1024)).toFixed(2);
+
+                        progressBar.style.width = `${percentage}%`;
+                        progressPercentage.textContent = `${percentage}%`;
+                        progressSize.textContent = `${uploadedMB} MB / ${totalMB} MB`;
+                        progressStatus.textContent = percentage < 100 ? '上传中...' : '完成上传';
+                    });
+
+                    // 调用主进程的上传方法
+                    let result;
+                    if (isPathInputMode) {
+                        // 路径输入模式 - 压缩上传
+                        const folderPaths = folderPathsTextarea.value.trim().split('\n').filter(path => path.trim());
+                        
+                        // 验证路径
+                        const { validPaths } = await validateFolderPaths(folderPaths);
+                        
+                        // 显示上传信息
+                        progressStatus.textContent = `准备压缩上传 ${validPaths.length} 个文件夹...`;
+                        
+                        result = await window.electronAPI.uploadMultipleFolders({
+                            folderPaths: validPaths,
+                            serverIp: serverIp,
+                            username: usernameInput.value,
+                            password: passwordInput.value,
+                            remotePath: remotePathInput.value
+                        });
+                    } else {
+                        // 文件选择模式 - 原有上传逻辑
+                        result = await window.electronAPI.upload({
+                            localPath: localPathInput.value,
+                            serverIp: serverIp,
+                            username: usernameInput.value,
+                            password: passwordInput.value,
+                            remotePath: remotePathInput.value
+                        });
+                    }
+
+                    // 确保显示100%进度
+                    progressBar.style.width = '100%';
+                    progressPercentage.textContent = '100%';
+                    progressStatus.textContent = '完成上传';
+                    
+                    // 显示上传结果
+                    resultContainer.classList.remove('hidden');
+                    if (result.success) {
+                        resultSuccess.classList.remove('hidden');
+                        successMessage.textContent = result.message;
+                        showNotification('上传成功', 'success');
+                        
+                        // 保存最近使用的配置
+                        try {
+                            const serverIp = getSelectedServerIp();
+                            await window.electronAPI.saveLastUploadConfig({
+                                serverIp: serverIp,
+                                username: usernameInput.value,
+                                password: passwordInput.value,
+                                remotePath: remotePathInput.value
+                            });
+                        } catch (error) {
+                            console.error('保存最近使用的配置失败:', error);
+                        }
+                    } else {
+                        resultError.classList.remove('hidden');
+                        errorMessage.textContent = result.message;
+                        showNotification('上传失败', 'error');
+                    }
+                } catch (error) {
+                    // 显示错误信息
+                    resultContainer.classList.remove('hidden');
+                    resultError.classList.remove('hidden');
+                    errorMessage.textContent = '上传过程中发生未知错误';
+                    showNotification('上传失败', 'error');
+                } finally {
+                    // 移除进度监听
+                    window.electronAPI.removeUploadProgressListener();
+                    
+                    // 恢复按钮状态
+                    uploadBtn.disabled = false;
+                    uploadBtn.innerHTML = '<i class="fa fa-cloud-upload mr-3"></i><span>开始上传</span>';
+                }
+            });
+
+            // 辅助函数：重置上传UI
+            function resetUploadUI() {
+                progressBar.style.width = '0%';
+                progressPercentage.textContent = '0%';
+                progressSize.textContent = '0 MB / 0 MB';
+                progressStatus.textContent = '准备上传...';
+            }
+
+
+
+            // 主题切换功能
+            function initThemeToggle() {
+                // 检查用户偏好设置
+                const savedTheme = localStorage.getItem('theme');
+                if (savedTheme === 'dark' || (!savedTheme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.body.classList.add('dark-theme');
+                    themeToggleBtn.innerHTML = '<i class="fa fa-sun-o text-yellow-400"></i>';
+                } else {
+                    document.body.classList.remove('dark-theme');
+                    themeToggleBtn.innerHTML = '<i class="fa fa-moon-o"></i>';
+                }
+
+                // 添加点击事件
+                themeToggleBtn.addEventListener('click', () => {
+                    const isDark = document.body.classList.toggle('dark-theme');
+                    
+                    // 更新图标
+                    if (isDark) {
+                        themeToggleBtn.innerHTML = '<i class="fa fa-sun-o text-yellow-400"></i>';
+                        localStorage.setItem('theme', 'dark');
+                    } else {
+                        themeToggleBtn.innerHTML = '<i class="fa fa-moon-o"></i>';
+                        localStorage.setItem('theme', 'light');
+                    }
+                });
+            }
+
+            // 初始化关于按钮功能
+            function initAboutButton() {
+                // 创建提示元素
+                const tooltipText = document.createElement('span');
+                tooltipText.className = 'tooltip-text';
+                tooltipText.textContent = 'v1.0.0 @copyright CJM/Neaya';
+                
+                // 包装关于按钮
+                const tooltipWrapper = document.createElement('div');
+                tooltipWrapper.className = 'tooltip';
+                
+                // 将按钮移入包装器
+                const parent = aboutBtn.parentNode;
+                parent.insertBefore(tooltipWrapper, aboutBtn);
+                tooltipWrapper.appendChild(aboutBtn);
+                tooltipWrapper.appendChild(tooltipText);
+            }
+
+            // 初始化主题切换和关于按钮
+            initThemeToggle();
+            initAboutButton();
+
+            // 加载最近使用的上传配置
+            async function loadLastUploadConfig() {
+                try {
+                    // 获取环境配置
+                    const config = await window.electronAPI.getEnvironmentConfig();
+                    
+                    if (config) {
+                        // 优先从环境配置中加载信息，而不是从lastUploadConfig中加载
+                        // 检查是否有上次选择的环境
+                        const lastSelectedEnv = localStorage.getItem('lastSelectedEnv') || 'dev';
+                        serverIpSelect.value = lastSelectedEnv;
+                        
+                        // 根据选择的环境填充相应的IP
+                        if (lastSelectedEnv === 'dev' && config.dev && config.dev.ip) {
+                            // 不需要设置customServerIp，因为dev选项已经代表了预设IP
+                        } else if (lastSelectedEnv === 'test' && config.test && config.test.ip) {
+                            // 不需要设置customServerIp，因为test选项已经代表了预设IP
+                        } else if (lastSelectedEnv === 'release' && config.release && config.release.ip) {
+                            // 不需要设置customServerIp，因为release选项已经代表了预设IP
+                        } else if (lastSelectedEnv === 'custom') {
+                            // 如果是自定义IP，尝试从lastUploadConfig中获取
+                            if (config.lastUploadConfig && config.lastUploadConfig.serverIp) {
+                                customServerIp.value = config.lastUploadConfig.serverIp;
+                            }
+                        }
+                        
+                        // 触发change事件以更新UI
+                        serverIpSelect.dispatchEvent(new Event('change'));
+                        
+                        // 从环境配置中加载用户名和密码
+                        if (config.authMode === 'unified' && config.unifiedUsername) {
+                            usernameInput.value = config.unifiedUsername;
+                        } else if (lastSelectedEnv === 'dev' && config.dev && config.dev.username) {
+                            usernameInput.value = config.dev.username;
+                        } else if (lastSelectedEnv === 'test' && config.test && config.test.username) {
+                            usernameInput.value = config.test.username;
+                        } else if (lastSelectedEnv === 'release' && config.release && config.release.username) {
+                            usernameInput.value = config.release.username;
+                        } else if (config.lastUploadConfig && config.lastUploadConfig.username) {
+                            // 如果环境配置中没有，再尝试从lastUploadConfig中获取
+                            usernameInput.value = config.lastUploadConfig.username;
+                        }
+                        
+                        if (config.authMode === 'unified' && config.unifiedPassword) {
+                            passwordInput.value = config.unifiedPassword;
+                        } else if (lastSelectedEnv === 'dev' && config.dev && config.dev.password) {
+                            passwordInput.value = config.dev.password;
+                        } else if (lastSelectedEnv === 'test' && config.test && config.test.password) {
+                            passwordInput.value = config.test.password;
+                        } else if (lastSelectedEnv === 'release' && config.release && config.release.password) {
+                            passwordInput.value = config.release.password;
+                        } else if (config.lastUploadConfig && config.lastUploadConfig.password) {
+                            // 如果环境配置中没有，再尝试从lastUploadConfig中获取
+                            passwordInput.value = config.lastUploadConfig.password;
+                        }
+                        
+                        // 远程路径可以从lastUploadConfig中获取
+                        if (config.lastUploadConfig && config.lastUploadConfig.remotePath) {
+                            remotePathInput.value = config.lastUploadConfig.remotePath;
+                        }
+                    }
+                } catch (error) {
+                    console.error('加载最近使用的配置失败:', error);
+                }
+            }
+            
+            // 获取选中的服务器IP
+            function getSelectedServerIp() {
+                const selectedValue = serverIpSelect.value;
+                if (selectedValue === 'dev' && environmentConfig.dev && environmentConfig.dev.ip) {
+                    return environmentConfig.dev.ip;
+                } else if (selectedValue === 'test' && environmentConfig.test && environmentConfig.test.ip) {
+                    return environmentConfig.test.ip;
+                } else if (selectedValue === 'release' && environmentConfig.release && environmentConfig.release.ip) {
+                    return environmentConfig.release.ip;
+                } else if (selectedValue === 'custom') {
+                    return customServerIp.value.trim();
+                }
+                return '';
+            }
+            
+            // 辅助函数：显示通知 (重新定义)
+            function showNotification(message, type) {
+                // 在实际应用中可以使用Electron的通知API
+                // 这里简单实现一个提示
+                const notification = document.createElement('div');
+                notification.className = `fixed top-4 right-4 px-6 py-3 rounded-xl shadow-lg z-50 transition-all duration-300 transform translate-y-0 opacity-100 ${type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`;
+                notification.innerHTML = `
+                    <div class="flex items-center">
+                        <i class="fa ${type === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle'} mr-2"></i>
+                        <span>${message}</span>
+                    </div>
+                `;
+                document.body.appendChild(notification);
+
+                // 3秒后移除通知
+                setTimeout(() => {
+                    notification.classList.add('translate-y-[-20px]', 'opacity-0');
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 300);
+                }, 3000);
+            }
+        });
+    </script>
+</body>
+</html>
