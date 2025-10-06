@@ -40,7 +40,7 @@
 ```bash
 # 克隆项目到本地
 git clone <项目地址>
-cd uploader
+cd auto-uploader
 ```
 
 2. **安装依赖**
